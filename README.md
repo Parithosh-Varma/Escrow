@@ -1,5 +1,7 @@
 <div align="center">
 
+**Made by [Parithosh Varma](https://github.com/Parithosh-Varma)**
+
 # Decentralized Escrow System
 
 **A trustless, multi-party escrow smart contract for secure transactions on EVM-compatible chains**
