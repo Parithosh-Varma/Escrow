@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Escrow DApp</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
+    input, button { margin: 4px; padding: 8px; }
+    button { cursor: pointer; }
+    .card { border: 1px solid #ccc; border-radius: 8px; padding: 16px; margin: 12px 0; }
+    .status-badge { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
+    .pending { background: #fef3cd; }
+    .funded { background: #cce5ff; }
+    .completed { background: #d4edda; }
+    .disputed { background: #f8d7da; }
+    .refunded { background: #e2e3e5; }
+  </style>
+</head>
+<body>
+  <h1>Decentralized Escrow</h1>
+  <p>Network: <span id="network">-</span> | Account: <span id="account">-</span></p>
+
+  <div class="card">
+    <h3>Create Escrow</h3>
+    <input id="seller" placeholder="Seller address" size="42" />
+    <input id="arbiter" placeholder="Arbiter address" size="42" />
+    <input id="token" placeholder="Token address (0x0 for ETH)" value="0x0000000000000000000000000000000000000000" size="42" />
+    <input id="amount" type="number" placeholder="Amount" />
+    <input id="expiration" type="number" placeholder="Expiration (unix ts)" />
+    <input id="feePercent" type="number" placeholder="Fee % (0 = default)" value="0" />
+    <button onclick="createEscrow()">Create Escrow</button>
+  </div>
+
+  <div class="card">
+    <h3>Deposit</h3>
+    <input id="depositId" type="number" placeholder="Escrow ID" />
+    <button onclick="deposit()">Deposit ETH</button>
+  </div>
+
+  <div class="card">
+    <h3>Actions</h3>
+    <input id="actionId" type="number" placeholder="Escrow ID" />
+    <button onclick="confirmBuyer()">Confirm (Buyer)</button>
+    <button onclick="confirmSeller()">Confirm (Seller)</button>
+    <button onclick="releaseFunds()">Release</button>
+    <button onclick="openDispute()">Open Dispute</button>
+    <button onclick="resolveDisputeSeller()">Resolve → Seller</button>
+    <button onclick="resolveDisputeBuyer()">Resolve → Refund</button>
+    <button onclick="requestRefund()">Request Refund</button>
+  </div>
+
+  <div class="card">
+    <h3>Query Escrow</h3>
+    <input id="queryId" type="number" placeholder="Escrow ID" />
+    <button onclick="queryEscrow()">Query</button>
+    <pre id="escrowInfo"></pre>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/ethers@6/dist/ethers.min.js"></script>
+  <script src="./DecentralizedEscrowABI.json"></script>
+  <script>
+    const CONTRACT_ADDRESS = "YOUR_DEPLOYED_ADDRESS";
+    let signer, contract;
+
+    async function init() {
+      if (!window.ethereum) return alert("Install MetaMask");
+      const provider = new ethers.BrowserProvider(window.ethereum);
+      signer = await provider.getSigner();
+      contract = new ethers.Contract(CONTRACT_ADDRESS, abi, signer);
+      document.getElementById("account").textContent = await signer.getAddress();
+      document.getElementById("network").textContent = (await provider.getNetwork()).name;
+    }
+
+    init();
+
+    async function createEscrow() {
+      const seller = document.getElementById("seller").value;
+      const arbiter = document.getElementById("arbiter").value;
+      const token = document.getElementById("token").value;
+      const amount = ethers.parseEther(document.getElementById("amount").value);
+      const expiration = parseInt(document.getElementById("expiration").value);
+      const feePercent = parseInt(document.getElementById("feePercent").value);
+      const tx = await contract.createEscrow(seller, arbiter, token, amount, expiration, feePercent);
+      await tx.wait();
+      alert("Escrow created! Tx: " + tx.hash);
+    }
+
+    async function deposit() {
+      const id = document.getElementById("depositId").value;
+      const escrow = await contract.escrows(id);
+      const tx = await contract.deposit(id, { value: escrow.amount });
+      await tx.wait();
+      alert("Deposited! Tx: " + tx.hash);
+    }
+
+    async function confirmBuyer() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.confirmByBuyer(id);
+      await tx.wait();
+      alert("Confirmed by buyer");
+    }
+
+    async function confirmSeller() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.confirmBySeller(id);
+      await tx.wait();
+      alert("Confirmed by seller");
+    }
+
+    async function releaseFunds() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.release(id);
+      await tx.wait();
+      alert("Released");
+    }
+
+    async function openDispute() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.openDispute(id);
+      await tx.wait();
+      alert("Dispute opened");
+    }
+
+    async function resolveDisputeSeller() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.resolveDispute(id, 2);
+      await tx.wait();
+      alert("Resolved in favor of seller");
+    }
+
+    async function resolveDisputeBuyer() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.resolveDispute(id, 4);
+      await tx.wait();
+      alert("Resolved - refund to buyer");
+    }
+
+    async function requestRefund() {
+      const id = document.getElementById("actionId").value;
+      const tx = await contract.requestRefund(id);
+      await tx.wait();
+      alert("Refunded");
+    }
+
+    async function queryEscrow() {
+      const id = document.getElementById("queryId").value;
+      const e = await contract.escrows(id);
+      const statusMap = ["Pending", "Funded", "Completed", "Disputed", "Refunded"];
+      document.getElementById("escrowInfo").textContent = JSON.stringify({
+        buyer: e.buyer,
+        seller: e.seller,
+        arbiter: e.arbiter,
+        token: e.token,
+        amount: ethers.formatEther(e.amount),
+        status: statusMap[Number(e.status)],
+        buyerConfirmed: e.buyerConfirmed,
+        sellerConfirmed: e.sellerConfirmed,
+        expiration: new Date(Number(e.expiration) * 1000).toLocaleString(),
+      }, null, 2);
+    }
+  </script>
+</body>
+</html>
