@@ -58,34 +58,7 @@ The Decentralized Escrow system enables **trustless transactions** between buyer
 
 ### State Machine
 
-```
-                    ┌──────────────┐
-                    │   Pending    │
-                    └──────┬───────┘
-                           │ deposit()
-                           ▼
-                    ┌──────────────┐
-                    │   Funded     │◄──── Funds locked in contract
-                    └──────┬───────┘
-                           │
-              ┌────────────┼────────────┐
-              ▼            ▼            ▼
-     ┌─────────────┐ ┌──────────┐ ┌──────────┐
-     │ Both Confirm │ │ Dispute  │ │ Timeout  │
-     └──────┬──────┘ └────┬─────┘ └────┬─────┘
-            │             │            │
-            ▼             ▼            ▼
-     ┌─────────────┐ ┌──────────┐ ┌──────────┐
-     │  Completed  │ │ Resolved │ │ Refunded │
-     │ ─── Funds to│ │ (arbiter)│ │ ─── Funds│
-     │     seller  │ └────┬─────┘ │   to buyer│
-     └─────────────┘      │       └──────────┘
-                          ▼
-                 ┌────────────────┐
-                 │ Completed      │
-                 │  or  Refunded  │
-                 └────────────────┘
-```
+![Flow Chart](pictures/Flow-Chart.png)
 
 ### Status Reference
 
