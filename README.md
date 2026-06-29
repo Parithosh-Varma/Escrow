@@ -1,6 +1,6 @@
 <div align="center">
 
-**Made by [Parithosh Varma](https://github.com/Parithosh-Varma)**
+**Made by [Parithosh-Varma](https://github.com/Parithosh-Varma)**
 
 # Decentralized Escrow System
 
