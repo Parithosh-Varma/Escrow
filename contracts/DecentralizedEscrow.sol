@@ -515,16 +515,17 @@ contract DecentralizedEscrow is ReentrancyGuard {
 
     function emergencyWithdraw(address token) external onlyAdmin nonReentrant {
         require(paused, "Escrow: not paused");
+        uint256 balance;
         if (token == address(0)) {
-            uint256 balance = address(this).balance;
+            balance = address(this).balance;
             (bool success, ) = payable(admin).call{ value: balance }("");
             require(success, "Escrow: withdraw failed");
         } else {
             IERC20 erc20 = IERC20(token);
-            uint256 balance = erc20.balanceOf(address(this));
+            balance = erc20.balanceOf(address(this));
             erc20.safeTransfer(admin, balance);
         }
-        emit EmergencyWithdraw(token, token == address(0) ? address(this).balance : IERC20(token).balanceOf(address(this)));
+        emit EmergencyWithdraw(token, balance);
     }
 
     function transferAdmin(address newAdmin) external onlyAdmin {
